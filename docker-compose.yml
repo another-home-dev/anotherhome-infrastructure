@@ -1,0 +1,184 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: another-home-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      MYSQL_DATABASE: another_home_accommodation
+    ports:
+      - '3308:3306'
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db/init:/docker-entrypoint-initdb.d
+
+  consul:
+    image: hashicorp/consul:1.19
+    container_name: another-home-consul
+    restart: always
+    ports:
+      - '8500:8500' # HTTP API + UI (http://localhost:8500/ui)
+      - '8600:8600/udp' # DNS interface
+    command: agent -dev -client=0.0.0.0 -ui
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:8500/v1/status/leader']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  gateway:
+    build:
+      context: ../another-home-gateway
+      dockerfile: Dockerfile
+    container_name: another-home-gateway
+    restart: always
+    ports:
+      - '3001:3001'
+    environment:
+      - PORT=3001
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+      - GATEWAY_PUBLIC_URL=${GATEWAY_PUBLIC_URL:-http://localhost:3001}
+      - ASGARDEO_JWKS_URI=${ASGARDEO_JWKS_URI}
+      - ASGARDEO_TENANT=${ASGARDEO_TENANT}
+      - ASGARDEO_ADMIN_CLIENT_ID=${ASGARDEO_ADMIN_CLIENT_ID}
+      - ASGARDEO_ADMIN_CLIENT_SECRET=${ASGARDEO_ADMIN_CLIENT_SECRET}
+      - ASGARDEO_WARDEN_ROLE_ID=${ASGARDEO_WARDEN_ROLE_ID}
+    depends_on:
+      consul:
+        condition: service_healthy
+      accommodation:
+        condition: service_started
+      finance:
+        condition: service_started
+      operations:
+        condition: service_started
+      notification:
+        condition: service_started
+
+  accommodation:
+    build:
+      context: ../another-home-accommodation
+      dockerfile: Dockerfile
+    container_name: another-home-accommodation
+    restart: always
+    expose:
+      - '4001'
+    ports:
+      - '4001:4001' # Exposed for debugging, can be removed for strict internal isolation
+    environment:
+      - PORT=4001
+      - SERVICE_NAME=accommodation
+      - SERVICE_ADDRESS=accommodation
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USERNAME=root
+      - DB_PASSWORD=${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      - DB_DATABASE=another_home_accommodation
+    depends_on:
+      db:
+        condition: service_started
+      consul:
+        condition: service_healthy
+
+  finance:
+    build:
+      context: ../another-home-finance
+      dockerfile: Dockerfile
+    container_name: another-home-finance
+    restart: always
+    expose:
+      - '4003'
+    ports:
+      - '4003:4003' # Exposed for debugging, can be removed for strict internal isolation
+    environment:
+      - PORT=4003
+      - SERVICE_NAME=finance
+      - SERVICE_ADDRESS=finance
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USERNAME=root
+      - DB_PASSWORD=${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      - DB_DATABASE=another_home_finance
+      - NOTIFICATION_SERVICE_URL=http://notification:4004
+    depends_on:
+      db:
+        condition: service_started
+      consul:
+        condition: service_healthy
+
+  operations:
+    build:
+      context: ../another-home-operations/operations
+      dockerfile: Dockerfile
+    container_name: another-home-operations
+    restart: always
+    expose:
+      - '4002'
+    ports:
+      - '4002:4002' # Exposed for debugging, can be removed for strict internal isolation
+    environment:
+      - PORT=4002
+      - SERVICE_NAME=operations
+      - SERVICE_ADDRESS=operations
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USERNAME=root
+      - DB_PASSWORD=${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      - DB_DATABASE=operations_service
+      - NOTIFICATION_SERVICE_URL=http://notification:4004
+    depends_on:
+      db:
+        condition: service_started
+      consul:
+        condition: service_healthy
+
+  notification:
+    build:
+      context: ../another-home-notification
+      dockerfile: Dockerfile
+    container_name: another-home-notification
+    restart: always
+    expose:
+      - '4004'
+    ports:
+      - '4004:4004' # Exposed for debugging, can be removed for strict internal isolation
+    environment:
+      - PORT=4004
+      - SERVICE_NAME=notification
+      - SERVICE_ADDRESS=notification
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USERNAME=root
+      - DB_PASSWORD=${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      - DB_DATABASE=notification_service
+    depends_on:
+      db:
+        condition: service_started
+      consul:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ../another-home-frontend/frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_APP_BASE_URL: http://localhost:8080
+    container_name: another-home-frontend
+    restart: always
+    ports:
+      - '8080:4173'
+    depends_on:
+      gateway:
+        condition: service_started
+
+volumes:
+  mysql_data:

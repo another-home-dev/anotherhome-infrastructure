@@ -1,0 +1,87 @@
+{{- range $name, $svc := .Values.services }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ $.Values.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $name }}
+  template:
+    metadata:
+      annotations:
+        # Autopilot otherwise evicts these single-replica pods whenever it removes an
+        # underused node, taking the service down for ~30s while it restarts elsewhere.
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "false"
+      labels:
+        app: {{ $name }}
+    spec:
+      containers:
+        - name: {{ $name }}
+          image: {{ $svc.image }}
+          imagePullPolicy: Always
+          resources:
+            {{- toYaml $.Values.resources | nindent 12 }}
+          ports:
+            - containerPort: {{ $svc.port }}
+          env:
+            - name: PORT
+              value: {{ $svc.port | quote }}
+            - name: SERVICE_NAME
+              value: {{ $name | quote }}
+            - name: SERVICE_ADDRESS
+              value: {{ $name | quote }}
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: another-home-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: another-home-config
+                  key: DB_PORT
+            - name: DB_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: another-home-config
+                  key: DB_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: another-home-secrets
+                  key: DB_PASSWORD
+            - name: DB_DATABASE
+              value: {{ $svc.dbDatabase | quote }}
+            {{- range $key, $value := $svc.extraEnv }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          readinessProbe:
+            httpGet:
+              path: {{ $svc.healthPath }}
+              port: {{ $svc.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: {{ $svc.healthPath }}
+              port: {{ $svc.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ $.Values.namespace }}
+spec:
+  selector:
+    app: {{ $name }}
+  ports:
+    - port: {{ $svc.port }}
+      targetPort: {{ $svc.port }}
+---
+{{- end }}

@@ -1,0 +1,94 @@
+namespace: another-home
+
+mysql:
+  image: mysql:8.0
+  defaultDatabase: another_home_accommodation
+  storageSize: 2Gi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+# Applied to every app container (all backend services, gateway, frontend).
+# These are lightweight Node services with low demo traffic — Autopilot's
+# auto-injected default (0.5 vCPU / 2Gi per pod) is far more than needed and
+# is what was driving the cost up; this brings a 7-pod app stack down from
+# ~3.5 vCPU/14Gi reserved to ~0.7-1 vCPU/1.4-2Gi reserved.
+resources:
+  requests:
+    cpu: 100m
+    memory: 200Mi
+  limits:
+    cpu: 250m
+    memory: 400Mi
+
+# Non-secret config shared by every backend service (DB connection details
+# minus the password, which lives in the Secret instead).
+config:
+  dbHost: db
+  dbPort: "3306"
+  dbUsername: root
+
+# Secret values. Never commit real values here: this repo is shared on GitHub.
+#  - Local kind: skaffold passes dbPassword from DB_PASSWORD in .env.
+#  - GKE: set once with `helm upgrade ... --set-string secrets.dbPassword=...`;
+#    every later upgrade (including CI) uses --reuse-values, which keeps it.
+# dbPassword is also MySQL's root password, and MySQL only reads it when the
+# data volume is first created, so changing it later locks the services out.
+secrets:
+  dbPassword: ""
+  asgardeoJwksUri: ""
+  asgardeoTenant: ""
+  asgardeoAdminClientId: ""
+  asgardeoAdminClientSecret: ""
+  asgardeoWardenRoleId: ""
+
+# One entry per backend microservice. Each becomes a Deployment + a ClusterIP
+# Service named exactly `<key>`, which is what lets every other service reach
+# it by plain DNS name via CoreDNS (http://<key>:<port>) — no Consul needed.
+services:
+  accommodation:
+    image: another-home-accommodation:latest
+    port: 4001
+    dbDatabase: another_home_accommodation
+    healthPath: /health
+    extraEnv: {}
+  finance:
+    image: another-home-finance:latest
+    port: 4003
+    dbDatabase: another_home_finance
+    healthPath: /health
+    extraEnv:
+      NOTIFICATION_SERVICE_URL: http://notification:4004
+  operations:
+    image: another-home-operations:latest
+    port: 4002
+    dbDatabase: operations_service
+    healthPath: /operations/health
+    extraEnv:
+      NOTIFICATION_SERVICE_URL: http://notification:4004
+  notification:
+    image: another-home-notification:latest
+    port: 4004
+    dbDatabase: notification_service
+    healthPath: /health
+    extraEnv: {}
+
+gateway:
+  image: another-home-gateway:latest
+  port: 3001
+  publicUrl: http://localhost:8000
+
+frontend:
+  image: another-home-frontend:latest
+  port: 4173
+
+ingress:
+  className: nginx
+  host: ""
+  staticIpName: ""
+  # Provision a Google-managed TLS cert for `host` (GKE / GCE ingress only).
+  managedCertificate: false

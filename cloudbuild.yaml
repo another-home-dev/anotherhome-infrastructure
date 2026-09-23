@@ -1,0 +1,29 @@
+# Deploys the Helm chart in this repo to GKE. Triggered on pushes to main that
+# touch k8s/** (config changes: env vars, resources, ingress, new services).
+#
+# Image changes don't come through here: each service repo's own cloudbuild.yaml
+# builds, tests and rolls out its image. This pipeline uses --reuse-values, so
+# the secrets and image references already set on the release are kept.
+substitutions:
+  _REGION: asia-southeast1
+  _CLUSTER: another-home
+  _RELEASE: another-home
+  _RELEASE_NAMESPACE: default
+  _HELM_VERSION: v3.16.2
+
+steps:
+  - id: helm-upgrade
+    name: gcr.io/cloud-builders/kubectl
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        curl -fsSL https://get.helm.sh/helm-${_HELM_VERSION}-linux-amd64.tar.gz | tar -xz -C /tmp
+        gcloud container clusters get-credentials ${_CLUSTER} --region ${_REGION}
+        /tmp/linux-amd64/helm upgrade ${_RELEASE} k8s/another-home \
+          --namespace ${_RELEASE_NAMESPACE} --reuse-values --wait --timeout 10m
+        kubectl -n another-home get pods
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+timeout: 1200s

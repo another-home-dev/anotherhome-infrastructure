@@ -1,0 +1,2 @@
+# Real secrets (DB password, Asgardeo admin client) - see .env.example.
+.env

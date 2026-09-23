@@ -1,0 +1,39 @@
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: another-home
+build:
+  local:
+    push: false
+  artifacts:
+    - image: another-home-accommodation
+      context: ../another-home-accommodation
+    - image: another-home-finance
+      context: ../another-home-finance
+    - image: another-home-operations
+      context: ../another-home-operations/operations
+    - image: another-home-notification
+      context: ../another-home-notification
+    - image: another-home-gateway
+      context: ../another-home-gateway
+    - image: another-home-frontend
+      context: ../another-home-frontend/frontend
+      docker:
+        buildArgs:
+          VITE_API_BASE_URL: /api/v1
+          VITE_APP_BASE_URL: http://localhost:8000
+deploy:
+  helm:
+    releases:
+      - name: another-home
+        chartPath: k8s/another-home
+        namespace: another-home
+        createNamespace: true
+        setValueTemplates:
+          secrets.dbPassword: "{{.DB_PASSWORD}}"
+          services.accommodation.image: "{{.IMAGE_FULLY_QUALIFIED_another_home_accommodation}}"
+          services.finance.image: "{{.IMAGE_FULLY_QUALIFIED_another_home_finance}}"
+          services.operations.image: "{{.IMAGE_FULLY_QUALIFIED_another_home_operations}}"
+          services.notification.image: "{{.IMAGE_FULLY_QUALIFIED_another_home_notification}}"
+          gateway.image: "{{.IMAGE_FULLY_QUALIFIED_another_home_gateway}}"
+          frontend.image: "{{.IMAGE_FULLY_QUALIFIED_another_home_frontend}}"

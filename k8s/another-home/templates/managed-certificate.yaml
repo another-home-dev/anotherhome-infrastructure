@@ -1,0 +1,16 @@
+{{- if .Values.ingress.managedCertificate }}
+# Google-managed TLS certificate for the GCE ingress.
+#
+# HTTPS is not cosmetic here: browsers only expose the Web Crypto API
+# (crypto.subtle) in a secure context. Over plain HTTP on a public host it is
+# undefined, so the Asgardeo SDK cannot verify the ID token signature and every
+# sign-in fails with SPA-CRYPTO-UTILS-VJ-IV01.
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: another-home-cert
+  namespace: {{ .Values.namespace }}
+spec:
+  domains:
+    - {{ .Values.ingress.host | quote }}
+{{- end }}
