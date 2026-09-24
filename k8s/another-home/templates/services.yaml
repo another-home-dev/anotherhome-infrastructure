@@ -59,6 +59,17 @@ spec:
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
+            {{- if eq $name "notification" }}
+            # The Firebase Admin SDK service account key, used to send real push
+            # notifications. `optional: true` so the pod still starts (falling back
+            # to the log-only stub) before this secret is configured.
+            - name: FIREBASE_SERVICE_ACCOUNT_JSON
+              valueFrom:
+                secretKeyRef:
+                  name: another-home-secrets
+                  key: FIREBASE_SERVICE_ACCOUNT_JSON
+                  optional: true
+            {{- end }}
           readinessProbe:
             httpGet:
               path: {{ $svc.healthPath }}
