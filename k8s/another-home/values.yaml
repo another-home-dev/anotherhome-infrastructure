@@ -45,6 +45,7 @@ secrets:
   asgardeoAdminClientId: ""
   asgardeoAdminClientSecret: ""
   asgardeoWardenRoleId: ""
+  firebaseServiceAccountJson: ""
 
 # One entry per backend microservice. Each becomes a Deployment + a ClusterIP
 # Service named exactly `<key>`, which is what lets every other service reach
