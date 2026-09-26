@@ -1,0 +1,26 @@
+# Non-secret overlay reproducing the REAL production configuration (pulled via
+# `helm get values another-home -n default`, secrets stripped), for the
+# configuration test in run-configuration-test.sh. This is the "GKE Autopilot,
+# public Ingress with a Google-managed cert" platform.
+ingress:
+  className: ""
+  host: "34.54.94.62.nip.io"
+  managedCertificate: true
+  staticIpName: "another-home-ip"
+
+gateway:
+  image: asia-southeast1-docker.pkg.dev/another-home-sep25/another-home-repo/another-home-gateway:latest
+  publicUrl: https://34.54.94.62.nip.io
+
+frontend:
+  image: asia-southeast1-docker.pkg.dev/another-home-sep25/another-home-repo/another-home-frontend:latest
+
+services:
+  accommodation:
+    image: asia-southeast1-docker.pkg.dev/another-home-sep25/another-home-repo/another-home-accommodation:latest
+  finance:
+    image: asia-southeast1-docker.pkg.dev/another-home-sep25/another-home-repo/another-home-finance:latest
+  operations:
+    image: asia-southeast1-docker.pkg.dev/another-home-sep25/another-home-repo/another-home-operations:latest
+  notification:
+    image: asia-southeast1-docker.pkg.dev/another-home-sep25/another-home-repo/another-home-notification:latest
