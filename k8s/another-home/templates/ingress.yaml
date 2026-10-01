@@ -6,6 +6,8 @@ metadata:
   annotations:
     {{- if eq .Values.ingress.className "nginx" }}
     nginx.ingress.kubernetes.io/use-regex: "true"
+    # Maintenance requests can carry a base64 photo; nginx's default is 1m.
+    nginx.ingress.kubernetes.io/proxy-body-size: "5m"
     {{- end }}
     {{- if .Values.ingress.staticIpName }}
     kubernetes.io/ingress.global-static-ip-name: {{ .Values.ingress.staticIpName | quote }}
