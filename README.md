@@ -1,8 +1,27 @@
-# another-home-infra
+# Another Home — Infrastructure
 
 Deployment config for the Another Home system: the Helm chart, local
 docker-compose / kind / Skaffold setups, and the Cloud Build pipeline that
-deploys the chart to GKE.
+deploys the chart to GKE. It also holds the system-level load, failover and
+configuration tests.
+
+Part of [Another Home](https://github.com/another-home-dev). Live at
+<https://34.54.94.62.nip.io>.
+
+## What's here
+
+| Path | Contents |
+|---|---|
+| `docker-compose.yml` | The whole system on one machine: MySQL, Consul, gateway, 4 services, frontend |
+| `db/init/` | SQL run on MySQL's first start: creates the finance, operations and notification databases |
+| `k8s/another-home/` | Helm chart: namespace, ConfigMap, Secret, MySQL, every service, Ingress, managed TLS certificate |
+| `kind-config.yaml`, `skaffold.yaml` | Local Kubernetes cluster and the dev loop that builds and deploys into it |
+| `cloudbuild.yaml` | Applies the Helm chart to GKE on a push to `main` |
+| `load-tests/` | k6 load, stress, peak and single-user performance tests |
+| `failover-tests/` | Deletes a running pod and measures how long requests fail |
+| `configuration-tests/` | Validates the Helm chart for both local kind and GKE |
+
+Each test folder has a `RESULTS.md` with the results of the last run against the live system.
 
 Clone this repo **next to** the service repos; the compose and Skaffold files
 build from `../another-home-*`:
@@ -16,6 +35,20 @@ another-home/
 ├── another-home-operations/operations/
 ├── another-home-notification/
 └── another-home-frontend/
+```
+
+The GitHub repository names differ from these folder names, so clone them like this:
+
+```bash
+mkdir another-home && cd another-home
+ORG=https://github.com/another-home-dev
+git clone $ORG/anotherhome-infrastructure.git  another-home-infra
+git clone $ORG/another-home-gateway.git        another-home-gateway
+git clone $ORG/another-home-backend.git        another-home-accommodation
+git clone $ORG/operations.git                  another-home-operations/operations
+git clone $ORG/another-home-finance.git        another-home-finance
+git clone $ORG/another-home-notifications.git  another-home-notification
+git clone $ORG/another-home-fronntend.git      another-home-frontend
 ```
 
 ## Secrets
