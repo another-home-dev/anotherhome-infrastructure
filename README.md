@@ -44,7 +44,7 @@ mkdir another-home && cd another-home
 ORG=https://github.com/another-home-dev
 git clone $ORG/anotherhome-infrastructure.git  another-home-infra
 git clone $ORG/another-home-gateway.git        another-home-gateway
-git clone $ORG/another-home-backend.git        another-home-accommodation
+git clone $ORG/another-home-accommodation.git        another-home-accommodation
 git clone $ORG/operations.git                  another-home-operations/operations
 git clone $ORG/another-home-finance.git        another-home-finance
 git clone $ORG/another-home-notifications.git  another-home-notification
@@ -121,7 +121,7 @@ SA=projects/another-home-sep25/serviceAccounts/951013866519-compute@developer.gs
 # <trigger name>:<linked repository name>
 for pair in \
   gateway:another-home-gateway \
-  accommodation:another-home-backend \
+  accommodation:another-home-accommodation \
   finance:another-home-finance \
   operations:operations \
   notification:another-home-notifications \
